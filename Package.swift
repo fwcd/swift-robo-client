@@ -15,6 +15,10 @@ let package = Package(
             name: "RoboClient",
             targets: ["RoboClient"]
         ),
+        .executable(
+            name: "RoboClientDemo",
+            targets: ["RoboClientDemo"]
+        ),
     ],
     dependencies: [
         // Dependencies declare other packages that this package depends on.
@@ -27,6 +31,12 @@ let package = Package(
             name: "RoboClient",
             dependencies: [
                 .product(name: "WebSocketKit", package: "websocket-kit"),
+            ]
+        ),
+        .executableTarget(
+            name: "RoboClientDemo",
+            dependencies: [
+                .target(name: "RoboClient"),
             ]
         ),
         .testTarget(
