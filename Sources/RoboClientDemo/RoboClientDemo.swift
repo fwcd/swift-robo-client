@@ -1,7 +1,10 @@
 import ArgumentParser
 import Dispatch
 import Foundation
+import Logging
 import RoboClient
+
+private let log = Logger(label: "RoboClientDemo")
 
 @main
 struct RoboClientDemo: ParsableCommand {
@@ -18,7 +21,7 @@ struct RoboClientDemo: ParsableCommand {
             try await withTaskCancellationHandler {
                 try await runAsync()
             } onCancel: {
-                print("Cancelled")
+                log.info("Cancelled")
             }
         }
 

@@ -1,6 +1,9 @@
 import Foundation
+import Logging
 import NIO
 import WebSocketKit
+
+private let log = Logger(label: "RoboClient")
 
 /// A connection to a Robo server.
 public final class RoboClient {
@@ -47,6 +50,17 @@ public final class RoboClient {
 
     /// Sends textual data to the server.
     private func send(raw: String) async throws {
-        webSocket.send(raw)
+        try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
+            let promise = eventLoopGroup.next().makePromise(of: Void.self)
+            webSocket.send(raw, promise: promise)
+
+            let future = promise.futureResult
+            future.whenSuccess {
+                cont.resume()
+            }
+            future.whenFailure { error in
+                cont.resume(throwing: error)
+            }
+        }
     }
 }
