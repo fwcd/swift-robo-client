@@ -23,6 +23,7 @@ let package = Package(
     dependencies: [
         // Dependencies declare other packages that this package depends on.
         .package(url: "https://github.com/vapor/websocket-kit.git", from: "2.5.1"),
+        .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.1.4"),
     ],
     targets: [
         // Targets are the basic building blocks of a package. A target can define a module or a test suite.
@@ -36,6 +37,7 @@ let package = Package(
         .executableTarget(
             name: "RoboClientDemo",
             dependencies: [
+                .product(name: "ArgumentParser", package: "swift-argument-parser"),
                 .target(name: "RoboClient"),
             ]
         ),
