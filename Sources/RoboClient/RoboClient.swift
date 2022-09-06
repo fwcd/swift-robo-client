@@ -23,44 +23,54 @@ public final class RoboClient {
         try! eventLoopGroup.syncShutdownGracefully()
     }
 
-    /// Connects to the Robo server at the given URL.
-    public static func connect(to url: URL) async throws -> Self {
+    /// Connects to the Robo server at the given URL using traditional callbacks.
+    public static func connect(to url: URL, continuation: @escaping (Result<RoboClient, Error>) -> Void) {
         let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-        let webSocket = try await withCheckedThrowingContinuation { cont in
-            WebSocket.connect(to: url, on: eventLoopGroup) { ws in
-                cont.resume(returning: ws)
-            }.whenFailure { error in
-                cont.resume(throwing: error)
+        WebSocket.connect(to: url, on: eventLoopGroup) { ws in
+            // TODO: Register other listeners
+            continuation(.success(Self(eventLoopGroup: eventLoopGroup, webSocket: ws)))
+        }.whenFailure { error in
+            continuation(.failure(error))
+        }
+    }
+
+    /// Connects to the Robo server at the given URL asynchronously.
+    @available(iOS 13, *)
+    public static func connect(to url: URL) async throws -> RoboClient {
+        try await withCheckedThrowingContinuation { continuation in
+            Self.connect(to: url) { result in
+                continuation.resume(with: result)
             }
         }
-        
-        // TODO: Register listeners
-
-        return Self(eventLoopGroup: eventLoopGroup, webSocket: webSocket)
     }
 
     /// Sends an action to the server.
-    public func send(action: Action) async throws {
-        let data = try JSONEncoder().encode(action)
-        guard let json = String(data: data, encoding: .utf8) else {
-            throw RoboClientError.couldNotEncode(data)
+    public func send(action: Action, continuation: @escaping (Result<Void, Error>) -> Void) {
+        do {
+            let data = try JSONEncoder().encode(action)
+            guard let json = String(data: data, encoding: .utf8) else {
+                throw RoboClientError.couldNotEncode(data)
+            }
+            send(raw: json, continuation: continuation)
+        } catch {
+            continuation(.failure(error))
         }
-        try await send(raw: json)
+    }
+
+    /// Sends an action to the server asynchronously.
+    @available(iOS 13, *)
+    public func send(action: Action) async throws {
+        try await withCheckedThrowingContinuation { continuation in
+            send(action: action) { result in
+                continuation.resume(with: result)
+            }
+        }
     }
 
     /// Sends textual data to the server.
-    private func send(raw: String) async throws {
-        try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
-            let promise = eventLoopGroup.next().makePromise(of: Void.self)
-            webSocket.send(raw, promise: promise)
-
-            let future = promise.futureResult
-            future.whenSuccess {
-                cont.resume()
-            }
-            future.whenFailure { error in
-                cont.resume(throwing: error)
-            }
-        }
+    private func send(raw: String, continuation: @escaping (Result<Void, Error>) -> Void) {
+        let promise = eventLoopGroup.next().makePromise(of: Void.self)
+        webSocket.send(raw, promise: promise)
+        promise.futureResult.whenComplete(continuation)
     }
 }
