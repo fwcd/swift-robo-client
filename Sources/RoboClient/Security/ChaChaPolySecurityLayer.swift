@@ -19,13 +19,13 @@ public struct ChaChaPolySecurityLayer: SecurityLayer {
 
     public func seal(_ plaintext: Data) throws -> Data {
         let box = try ChaChaPoly.seal(plaintext, using: key)
-        return Data(box.nonce) + box.tag + box.ciphertext
+        return Data(box.nonce) + box.ciphertext + box.tag
     }
 
     public func open(_ boxData: Data) throws -> Data {
         let nonce = boxData[..<nonceLength]
-        let tag = boxData[nonceLength..<(nonceLength + tagLength)]
-        let ciphertext = boxData[(nonceLength + tagLength)...]
+        let ciphertext = boxData[nonceLength..<(boxData.count - tagLength)]
+        let tag = boxData[(boxData.count - tagLength)...]
         let box = try ChaChaPoly.SealedBox(
             nonce: .init(data: nonce),
             ciphertext: ciphertext,
