@@ -89,6 +89,7 @@ extension RoboClient where Security == EmptySecurityLayer {
         Self.connect(to: url, security: .init(), continuation: continuation)
     }
 
+    @available(iOS 13, *)
     public static func connect(to url: URL) async throws -> RoboClient {
         try await Self.connect(to: url, security: .init())
     }
