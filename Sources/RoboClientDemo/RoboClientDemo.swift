@@ -11,8 +11,13 @@ struct RoboClientDemo: ParsableCommand {
     @Argument(help: "The URL of the Robo server")
     var url: URL = URL(string: "ws://localhost:19877")!
 
-    func runAsync() async throws {
-        let client = try await RoboClient.connect(to: url)
+    @Option(help: "A Base64-encoded ChaCha20-Poly1305 key to encrypt messages with")
+    var key: String?
+
+    func runAsync<Security>(security: Security) async throws where Security: SecurityLayer {
+        log.info("Running with \(security)")
+
+        let client = try await RoboClient.connect(to: url, security: security)
 
         let commands: [String: ([String]) async throws -> Void] = [
             "keys": { args in
@@ -57,7 +62,11 @@ struct RoboClientDemo: ParsableCommand {
 
     func run() {
         Task {
-            try! await runAsync()
+            if let key = key, let keyData = Data(base64Encoded: key) {
+                try! await runAsync(security: ChaChaPolySecurityLayer(key: keyData))
+            } else {
+                try! await runAsync(security: EmptySecurityLayer())
+            }
             Self.exit()
         }
 

@@ -18,3 +18,8 @@ The `RoboClient` library interfaces with [Robo](https://github.com/fwcd/robo) to
 - ``Action``
 - ``MouseButton``
 - ``Vec2``
+
+### Security
+
+- ``SecurityLayer``
+- ``EmptySecurityLayer``

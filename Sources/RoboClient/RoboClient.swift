@@ -6,16 +6,19 @@ import WebSocketKit
 private let log = Logger(label: "RoboClient")
 
 /// A connection to a Robo server.
-public final class RoboClient {
+public final class RoboClient<Security> where Security: SecurityLayer {
     private let eventLoopGroup: any EventLoopGroup
     private let webSocket: WebSocket
+    private let security: Security
 
     private init(
         eventLoopGroup: any EventLoopGroup,
-        webSocket: WebSocket
+        webSocket: WebSocket,
+        security: Security
     ) {
         self.eventLoopGroup = eventLoopGroup
         self.webSocket = webSocket
+        self.security = security
     }
 
     deinit {
@@ -24,11 +27,15 @@ public final class RoboClient {
     }
 
     /// Connects to the Robo server at the given URL using traditional callbacks.
-    public static func connect(to url: URL, continuation: @escaping (Result<RoboClient, Error>) -> Void) {
+    public static func connect(
+        to url: URL,
+        security: Security,
+        continuation: @escaping (Result<RoboClient, Error>) -> Void
+    ) {
         let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         WebSocket.connect(to: url, on: eventLoopGroup) { ws in
             // TODO: Register other listeners
-            continuation(.success(Self(eventLoopGroup: eventLoopGroup, webSocket: ws)))
+            continuation(.success(Self(eventLoopGroup: eventLoopGroup, webSocket: ws, security: security)))
         }.whenFailure { error in
             continuation(.failure(error))
         }
@@ -36,9 +43,9 @@ public final class RoboClient {
 
     /// Connects to the Robo server at the given URL asynchronously.
     @available(iOS 13, *)
-    public static func connect(to url: URL) async throws -> RoboClient {
+    public static func connect(to url: URL, security: Security) async throws -> RoboClient {
         try await withCheckedThrowingContinuation { continuation in
-            Self.connect(to: url) { result in
+            Self.connect(to: url, security: security) { result in
                 continuation.resume(with: result)
             }
         }
@@ -48,10 +55,7 @@ public final class RoboClient {
     public func send(action: Action, continuation: @escaping (Result<Void, Error>) -> Void) {
         do {
             let data = try JSONEncoder().encode(action)
-            guard let json = String(data: data, encoding: .utf8) else {
-                throw RoboClientError.couldNotEncode(data)
-            }
-            send(raw: json, continuation: continuation)
+            send(raw: data, continuation: continuation)
         } catch {
             continuation(.failure(error))
         }
@@ -67,10 +71,25 @@ public final class RoboClient {
         }
     }
 
-    /// Sends textual data to the server.
-    private func send(raw: String, continuation: @escaping (Result<Void, Error>) -> Void) {
-        let promise = eventLoopGroup.next().makePromise(of: Void.self)
-        webSocket.send(raw, promise: promise)
-        promise.futureResult.whenComplete(continuation)
+    /// Sends (plaintext) binary data to the server.
+    private func send(raw: Data, continuation: @escaping (Result<Void, Error>) -> Void) {
+        do {
+            let promise = eventLoopGroup.next().makePromise(of: Void.self)
+            let sealed = try security.seal(raw)
+            webSocket.send(Array(sealed), promise: promise)
+            promise.futureResult.whenComplete(continuation)
+        } catch {
+            continuation(.failure(error))
+        }
+    }
+}
+
+extension RoboClient where Security == EmptySecurityLayer {
+    public static func connect(to url: URL, continuation: @escaping (Result<RoboClient, Error>) -> Void) {
+        Self.connect(to: url, security: .init(), continuation: continuation)
+    }
+
+    public static func connect(to url: URL) async throws -> RoboClient {
+        try await Self.connect(to: url, security: .init())
     }
 }
