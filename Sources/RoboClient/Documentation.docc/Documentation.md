@@ -23,3 +23,4 @@ The `RoboClient` library interfaces with [Robo](https://github.com/fwcd/robo) to
 
 - ``SecurityLayer``
 - ``EmptySecurityLayer``
+- ``AnySecurityLayer``
