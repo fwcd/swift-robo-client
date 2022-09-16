@@ -11,11 +11,16 @@ public final class RoboClient<Security> where Security: SecurityLayer {
     private let webSocket: WebSocket
     private let security: Security
 
+    /// The URL of the connected server.
+    public let url: URL
+
     private init(
+        url: URL,
         eventLoopGroup: any EventLoopGroup,
         webSocket: WebSocket,
         security: Security
     ) {
+        self.url = url
         self.eventLoopGroup = eventLoopGroup
         self.webSocket = webSocket
         self.security = security
@@ -35,7 +40,7 @@ public final class RoboClient<Security> where Security: SecurityLayer {
         let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         WebSocket.connect(to: url, on: eventLoopGroup) { ws in
             // TODO: Register other listeners
-            continuation(.success(Self(eventLoopGroup: eventLoopGroup, webSocket: ws, security: security)))
+            continuation(.success(Self(url: url, eventLoopGroup: eventLoopGroup, webSocket: ws, security: security)))
         }.whenFailure { error in
             continuation(.failure(error))
         }
