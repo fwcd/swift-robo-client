@@ -13,7 +13,7 @@ public struct ChaChaPolySecurityLayer: SecurityLayer {
         self.key = key
     }
 
-    init(key data: Data) {
+    public init(key data: Data) {
         self.init(key: SymmetricKey(data: data))
     }
 
