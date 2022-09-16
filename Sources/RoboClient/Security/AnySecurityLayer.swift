@@ -5,7 +5,7 @@ public struct AnySecurityLayer: SecurityLayer {
     private let _seal: (Data) throws -> Data
     private let _open: (Data) throws -> Data
 
-    public init(_ wrapped: some SecurityLayer) {
+    public init<Security>(_ wrapped: Security) where Security: SecurityLayer {
         _seal = wrapped.seal
         _open = wrapped.open
     }
