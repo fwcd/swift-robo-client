@@ -36,7 +36,8 @@ public final class RoboClient<Security> where Security: SecurityLayer {
     deinit {
         _ = webSocket.close()
         eventLoopGroup.shutdownGracefully { error in
-            log.error("Error while shutting down event loop group: \(String(describing: error))")
+            guard let error = error else { return }
+            log.error("Error while shutting down event loop group: \(error)")
         }
     }
 
