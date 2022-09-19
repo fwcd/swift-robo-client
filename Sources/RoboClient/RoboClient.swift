@@ -34,7 +34,7 @@ public final class RoboClient<Security> where Security: SecurityLayer {
     }
 
     deinit {
-        try! webSocket.close().wait()
+        _ = webSocket.close()
         try! eventLoopGroup.syncShutdownGracefully()
     }
 
