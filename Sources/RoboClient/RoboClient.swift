@@ -35,7 +35,9 @@ public final class RoboClient<Security> where Security: SecurityLayer {
 
     deinit {
         _ = webSocket.close()
-        try! eventLoopGroup.syncShutdownGracefully()
+        eventLoopGroup.shutdownGracefully { error in
+            log.error("Error while shutting down event loop group: \(String(describing: error))")
+        }
     }
 
     /// Connects to the Robo server at the given URL using traditional callbacks.
