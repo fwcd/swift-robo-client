@@ -10,6 +10,7 @@ public final class RoboClient<Security> where Security: SecurityLayer {
     private let eventLoopGroup: any EventLoopGroup
     private let webSocket: WebSocket
     private let security: Security
+    private var closeHandlers: [() -> Void] = []
 
     /// The URL of the connected server.
     public let url: URL
@@ -24,6 +25,12 @@ public final class RoboClient<Security> where Security: SecurityLayer {
         self.eventLoopGroup = eventLoopGroup
         self.webSocket = webSocket
         self.security = security
+
+        webSocket.onClose.whenComplete { [weak self] _ in
+            for closeHandler in self?.closeHandlers ?? [] {
+                closeHandler()
+            }
+        }
     }
 
     deinit {
@@ -54,6 +61,11 @@ public final class RoboClient<Security> where Security: SecurityLayer {
                 continuation.resume(with: result)
             }
         }
+    }
+
+    /// Adds a close handler to the web socket.
+    public func onClose(_ handler: @escaping () -> Void) {
+        closeHandlers.append(handler)
     }
 
     /// Sends an action to the server.
